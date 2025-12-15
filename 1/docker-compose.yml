@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    # Ключевая настройка для доступа к хосту
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "ollama.local:host-gateway"  # альтернативное имя
+    environment:
+      # === БАЗА ДАННЫХ (PostgreSQL на хосте) ===
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_SCHEMA=public
+
+      # === ВРЕМЕННАЯ ЗОНА ===
+      - GENERIC_TIMEZONE=${TIMEZONE}
+      - TZ=${TIMEZONE}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - NODE_ENV=development
+      - N8N_USER_MANAGEMENT_DISABLED=true
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_TEMPLATES_ENABLED=true
+      - N8N_RUNNERS_ENABLED=true
+
+
+      - NODE_ENV=development
+
+      # === WEBHOOK И СЕТЬ ===
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+
+      # === ОПТИМИЗАЦИЯ ДЛЯ LLM ===
+      - N8N_DEFAULT_MEMORY=4096
+      - N8N_EXECUTIONS_TIMEOUT=3600
+      - N8N_EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - N8N_EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - N8N_EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+
+      # === НАСТРОЙКИ ДЛЯ ВНЕШНИХ СЕРВИСОВ ===
+      - EXTERNAL_FRONTEND_HOOKS_URLS=[]
+      - N8N_METRICS=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_SKIP_WEBHOOK_DEREGISTRATION_SHUTDOWN=true
+
+      # === ПУТИ ===
+      - N8N_USER_FOLDER=/home/alex/.n8n
+
+    volumes:
+      - n8n_data:/home/alex/.n8n
+      - ~/.n8n/custom-nodes:/home/alex/.n8n/custom-nodes:rw
+      # Монтируем директорию для шаблонов Ollama
+      - ~/.ollama:/tmp/ollama:ro
+      # Монтируем директорию для моделей (опционально)
+      - /usr/share/ollama:/usr/share/ollama:ro
+
+    networks:
+      n8n_network:
+
+networks:
+  n8n_network:
+    driver: bridge
+    # Внешняя сеть, если уже создана
+    external: true
+
+volumes:
+  n8n_data:
+    external: true
