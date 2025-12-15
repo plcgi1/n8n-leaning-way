@@ -1,0 +1,191 @@
+{
+  "name": "Продвинутое извлечение данных из API",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -736,
+        -32
+      ],
+      "id": "32aeaf31-62bd-4a5c-bda0-415a0190c852",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Получаем ответ от HTTP Request (текущая страница)\nconst response = $input.first().json;\nconst currentResults = response.results || []; \nconst nextUrl = response.next || null; // URL следующей страницы или null\n\nlet previousData = $(\"InitCode\").first().json.totalData;\n\ncurrentResults.forEach(item => {\n  // https://pokeapi.co/api/v2/pokemon/10318/\n  const arr = item.url.split('/')\n  item.id = arr[arr.length - 2]\n})\n\n// Объединяем\nconst allData = previousData.concat(currentResults);\n\n// Формируем выход. \n// Поле 'url' будет использовано HTTP Request на следующем круге (если оно есть).\n// Поле 'accumulated_data' мы передаем сами себе в будущее.\nreturn {\n    json: {\n        url: nextUrl, // Если null, цикл остановится в узле IF\n        hasUrl: nextUrl ? true : false,\n        totalData: allData,\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -32
+      ],
+      "id": "cbd279e2-3535-4df4-bebf-0a2fed622a2c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "30ed024a-a4e0-4967-8851-733cc3d52659",
+              "leftValue": "={{ $json.hasUrl }}",
+              "rightValue": "={{ true }} ",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "32ea96da-5945-4fb7-bb2f-9805f551f7d3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "path": "d194c57c-7ead-472e-8dd8-74c3e20da112",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1168,
+        -16
+      ],
+      "id": "6729a9fe-a310-4608-b35c-4f857a9284cf",
+      "name": "Webhook",
+      "webhookId": "d194c57c-7ead-472e-8dd8-74c3e20da112"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.totalData }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -128,
+        16
+      ],
+      "id": "e2be6d44-1a45-40c4-aef6-94dec60bf6aa",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const loopData = $input.first().json\n\nconst nextUrl = loopData && loopData.url ? loopData.url : 'https://pokeapi.co/api/v2/pokemon?limit=100&offset=0'\n\nconst totalData = loopData.totalData && loopData.totalData.length > 0 ? loopData.totalData : []\nreturn {\n    json: {\n        url: nextUrl, // Если null, цикл остановится в узле IF\n        hasUrl: nextUrl ? true : false,\n        totalData\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -928,
+        -32
+      ],
+      "id": "682965ce-b2f1-40b0-bb02-7cee7a43c663",
+      "name": "InitCode"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "InitCode",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "InitCode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InitCode": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b9bcabe6-1784-45a7-92cd-bec068d99967",
+  "meta": {
+    "instanceId": "f44445d9e1e8f4bcd07780e1cbc69c20066728f201f18edc7ea3bbdfd2dcec51"
+  },
+  "id": "94UTNkNU0XRQSiCO",
+  "tags": []
+}
