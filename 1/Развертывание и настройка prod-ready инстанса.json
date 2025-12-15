@@ -1,25 +1,10 @@
 {
-  "name": "Chat with local LLMs using n8n and Ollama",
+  "name": "Развертывание и настройка prod-ready инстанса",
   "nodes": [
     {
       "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "typeVersion": 1.4,
-      "position": [
-        -352,
-        -96
-      ],
-      "id": "560cc6a0-4dc5-489e-9a82-e111cc3feaf4",
-      "name": "When chat message received",
-      "webhookId": "696aa326-df21-4cb6-a57e-b34fd0c859b2",
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
         "promptType": "define",
-        "text": "=$json.body.chatInput",
+        "text": "={{ $json.body.chatInput }}",
         "options": {
           "systemMessage": "You are a helpful assistant"
         }
@@ -27,8 +12,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
       "position": [
-        208,
-        0
+        -32,
+        -112
       ],
       "id": "3bb029c1-3b06-4e87-8b3a-a872bf90e09e",
       "name": "AI Agent"
@@ -43,8 +28,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "typeVersion": 1,
       "position": [
-        128,
-        176
+        -48,
+        16
       ],
       "id": "e2352d26-2cd8-4fdf-9baf-85ff220bd110",
       "name": "Ollama Chat Model",
@@ -59,6 +44,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "fc82ef08-f760-4bd6-8bab-29175e8e16a5",
+        "responseMode": "responseNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -70,15 +56,25 @@
       "id": "7d8d6fec-f998-4944-88a0-79659a47229a",
       "name": "Webhook",
       "webhookId": "fc82ef08-f760-4bd6-8bab-29175e8e16a5"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "= { \"answer\":  \"{{ $json.output }}\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        -96
+      ],
+      "id": "4b17841a-89af-4ac7-9563-9f843f1c56e8",
+      "name": "Respond to Webhook"
     }
   ],
   "pinData": {},
   "connections": {
-    "When chat message received": {
-      "main": [
-        []
-      ]
-    },
     "Ollama Chat Model": {
       "ai_languageModel": [
         [
@@ -100,13 +96,24 @@
           }
         ]
       ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "dd0274b5-a24e-4c27-8f00-d1d03dde730d",
+  "versionId": "6588cbfc-d04c-45a6-9ff6-9fbb219dfab7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f44445d9e1e8f4bcd07780e1cbc69c20066728f201f18edc7ea3bbdfd2dcec51"
