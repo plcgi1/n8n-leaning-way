@@ -1,0 +1,154 @@
+{
+  "name": "2. Безопасная обработка Webhooks",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fe77baaf-7fa5-4154-9ed4-b342c0c5c2f0",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1888,
+        -160
+      ],
+      "id": "f97c6758-b7ef-4df4-a324-8f63e7f024aa",
+      "name": "Webhook",
+      "webhookId": "fe77baaf-7fa5-4154-9ed4-b342c0c5c2f0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto')\nconst secret = $env.HMAC_SECRET\n\nfor (const item of $input.all()) {\n  const rawBody = item.json.body\n  const receivedSignature = item.json.headers['x-sig']\n  // Если raw_body это объект, его часто нужно превратить в строку для хеширования\n  const dataToSign = typeof rawBody === 'object' ? JSON.stringify(rawBody) : rawBody;\n  // Создаем HMAC\n  const calculatedSignature = crypto.createHmac('sha256', secret)\n                     .update(dataToSign)\n                     .digest('hex');\n  // Безопасное сравнение\n  // Сначала нужно привести к Buffer, так как timingSafeEqual работает с буферами\n  const bufferA = Buffer.from(calculatedSignature, 'utf8');\n  const bufferB = Buffer.from(receivedSignature, 'utf8');\n\n  let isValid = false;\n  \n  // Длины должны совпадать, иначе timingSafeEqual выкинет ошибку\n  if (bufferA.length === bufferB.length) {\n      isValid = crypto.timingSafeEqual(bufferA, bufferB);\n  }\n\n  item.json.isSignatureValid = isValid;\n  \n  item.json.calculatedSignature = calculatedSignature;\n  item.json.isSignatureValid = isValid;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1696,
+        -160
+      ],
+      "id": "7acb6684-2a6e-4a11-a141-1d87d33a8a46",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c275c755-75d8-4e93-8f7e-474f0e15cedc",
+              "leftValue": "={{ $json.isSignatureValid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1472,
+        -112
+      ],
+      "id": "c2e93881-e062-4008-9f2f-03720683c7cd",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"check\": \"OK\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1248,
+        -224
+      ],
+      "id": "72fff2be-c156-4bcc-afd6-22cb40bbcf18",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"error\": \"NOT VALID\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1264,
+        -16
+      ],
+      "id": "d69afe5f-76e2-4111-8b1c-f46a472ea746",
+      "name": "Respond to Webhook1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "01244028-1423-4841-a62d-7748c6af6ce3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f44445d9e1e8f4bcd07780e1cbc69c20066728f201f18edc7ea3bbdfd2dcec51"
+  },
+  "id": "99ltcvBu3E765IcO",
+  "tags": []
+}
